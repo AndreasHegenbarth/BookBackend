@@ -1,11 +1,20 @@
 var builder = WebApplication.CreateBuilder(args);
 
 
-// Dependency Injection für Repository als Singleton
+// Dependency Injection fÃ¼r Repository als Singleton
 builder.Services.AddSingleton<IBookRepository, BookRepository>();
 
+// CORS hinzufÃ¼gen
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(b =>
+    {
+        b.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost");
+        b.AllowAnyHeader();
+    });
+});
 
-// GraphQL Schema und Resolver registrieren (Einbindung des GraphQL-Server über die HotChocolate-Bibliothek)
+// GraphQL Schema und Resolver registrieren (Einbindung des GraphQL-Server Ã¼ber die HotChocolate-Bibliothek)
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
@@ -21,22 +30,16 @@ if (app.Environment.IsDevelopment())
 }
 
 
-app.UseHttpsRedirection(); // Best Practice für Sicherheit Erzwingt HTTPS, um die Kommunikation abzusichern.
+app.UseHttpsRedirection(); // Best Practice fÃ¼r Sicherheit Erzwingt HTTPS, um die Kommunikation abzusichern.
+app.UseCors();
+
 
 // GraphQL-Endpunkt direkt auf oberster Ebene registrieren. Registriert die GraphQL-API-Route (/graphql).
 app.MapGraphQL();
-
-// Eine Umleitung zur GraphQL Playground-Oberfläche.
-app.MapGet("/playground",  context =>
-{
-     context.Response.Redirect("/graphql/playground");
-    return  Task.CompletedTask;
-});
-
 app.Run();
 
 
-// Interface für das Repository (Dependency Inversion)
+// Interface fÃ¼r das Repository (Dependency Inversion)
 public interface IBookRepository
 {
     IEnumerable<Book> GetBooks();
@@ -51,15 +54,15 @@ public class BookRepository : IBookRepository
 {
     private readonly List<Book> _books =
     [
-        new Book(1, "GraphQL für Einsteiger", "Max Mustermann"),
-        new Book(2, "GraphQL in der Praxis", "Lisa Musterfrau")
+        new Book(1, "GraphQL fÃ¼r Einsteiger", "Max Mustermann", DateTime.Now),
+        new Book(2, "GraphQL in der Praxis", "Lisa Musterfrau", DateTime.Now)
     ];
 
     public IEnumerable<Book> GetBooks() => _books;
 
     public Book AddBook(string title, string author)
     {
-        var newBook = new Book(_books.Count + 1, title, author);
+        var newBook = new Book(_books.Count + 1, title, author, DateTime.Now);
         _books.Add(newBook); 
         return newBook;
     }
@@ -76,14 +79,14 @@ public class BookRepository : IBookRepository
 }
 
 
-// GraphQL Query-Resolver (Dependency Injection). Liest Bücher aus dem Repository.
+// GraphQL Query-Resolver (Dependency Injection). Liest Bï¿½cher aus dem Repository.
 public class Query(IBookRepository repository)
 {
     public IEnumerable<Book> GetBooks() => repository.GetBooks();
 }
 
 
-// GraphQL Mutation-Resolver (Dependency Injection). Fügt neue Bücher über GraphQL hinzu.
+// GraphQL Mutation-Resolver (Dependency Injection). Fï¿½gt neue Bï¿½cher ï¿½ber GraphQL hinzu.
 public class Mutation(IBookRepository repository)
 {
     public Book AddBook(string title, string author) => repository.AddBook(title, author);
@@ -95,5 +98,5 @@ public class Mutation(IBookRepository repository)
 }
 
 
-// Datenmodell für Bücher
-public record Book(int Id, string Title, string Author);
+// Datenmodell fï¿½r Bï¿½cher
+public record Book(int Id, string Title, string Author, DateTime Date);
